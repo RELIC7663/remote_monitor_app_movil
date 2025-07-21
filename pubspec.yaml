@@ -22,12 +22,13 @@ dependencies:
   permission_handler: ^11.3.0
   network_info_plus: ^6.1.4
   device_info_plus: ^11.5.0
-  battery_info: ^1.1.1
+  battery_plus: ^6.2.2
   connectivity_plus: ^6.1.4
   provider : ^6.1.5
   # Servidor HTTP
   shelf: ^1.4.2
   shelf_router: ^1.1.4
+  sqflite_common_ffi: ^2.3.6
 
 dev_dependencies:
   flutter_test:

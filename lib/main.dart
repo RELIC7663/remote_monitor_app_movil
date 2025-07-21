@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:remote_monitor_app_movil/data/databaseHelper.dart'; // Asegúrate de que la ruta sea correcta
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'dart:io'; // Para Platform.isWindows, Platform.isAndroid, etc.
 
 void main() {
   // Asegura que los bindings de Flutter estén inicializados antes de usar plugins.
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -35,6 +42,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   String _deviceId = 'Obteniendo ID del dispositivo...';
   String _apiToken = 'Obteniendo Token API...';
+
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   @override

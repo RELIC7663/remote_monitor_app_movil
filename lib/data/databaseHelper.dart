@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert'; // Para base64Url
 import 'dart:math'; // Para Random
-
-import 'package:sqflite/sqflite.dart';
+import 'dart:io'; // Para Platform
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart'; // Necesario para getDatabasesPath
 
@@ -40,17 +42,29 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    // Obtiene la ruta al directorio de bases de datos de la aplicación.
-    String databasesPath =
-        await getDatabasesPath(); // path_provider es necesario para esta función
-    String path = join(databasesPath, 'remote_monitor.db');
+    // Inicializa FFI solo si es necesario (escritorio)
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit(); // Configura el entorno FFI
+      databaseFactory = databaseFactoryFfi; // Usa la fábrica FFI
+    }
 
-    // Abre la base de datos. Si no existe, la crea.
+    // Obtiene la ruta de la base de datos
+    String path;
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Para móvil: usa getDatabasesPath()
+      final databasesPath = await getDatabasesPath();
+      path = join(databasesPath, 'remote_monitor.db');
+    } else {
+      // Para escritorio: usa una ruta local (ejemplo: directorio actual)
+      path = join(Directory.current.path, 'remote_monitor.db');
+    }
+
+    // Abre la base de datos
     return await openDatabase(
       path,
       version: 1,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade, // Puedes añadir lógica de actualización aquí
+      onUpgrade: _onUpgrade,
     );
   }
 
