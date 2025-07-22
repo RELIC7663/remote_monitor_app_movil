@@ -246,13 +246,20 @@ class DatabaseHelper {
   }
 
   // --- Operaciones de Autenticación ---
-  Future<String?> getApiToken() async {
+  Future<String> getApiToken() async {
     final db = await database;
-    List<Map<String, dynamic>> result = await db.query(tableAuth, limit: 1);
-    if (result.isNotEmpty) {
+
+    // Intenta obtener el token existente
+    final result = await db.query(tableAuth, limit: 1);
+
+    if (result.isNotEmpty && result.first['api_token'] != null) {
       return result.first['api_token'] as String;
     }
-    return null;
+
+    // Si no hay token, genera uno nuevo
+    final newToken = _generateUniqueToken();
+    await setApiToken(newToken);
+    return newToken;
   }
 
   Future<int> setApiToken(String newToken) async {
@@ -270,31 +277,34 @@ class DatabaseHelper {
 
   // --- Gestión de Device ID persistente ---
   Future<String> getOrCreateDeviceId() async {
-    final storedDeviceId = await getConfigValue('device_id_key');
-    if (storedDeviceId != null && storedDeviceId.isNotEmpty) {
-      return storedDeviceId;
-    } else {
-      // Si no hay un ID guardado, genera uno
+    try {
+      // Intenta obtener el ID almacenado
+      final storedDeviceId = await getConfigValue('device_id_key');
+      if (storedDeviceId != null && storedDeviceId.isNotEmpty) {
+        return storedDeviceId;
+      }
+
+      // Si no existe, genera uno nuevo
       final deviceInfo = DeviceInfoPlugin();
       String newDeviceId;
 
-      if (await deviceInfo.androidInfo != null) {
-        // En Android, usa el Android ID si está disponible
+      if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        newDeviceId = androidInfo.id;
-      } else if (await deviceInfo.iosInfo != null) {
-        // En iOS, usa el identifierForVendor si está disponible
-        final iosInfo = await deviceInfo.iosInfo;
         newDeviceId =
-            iosInfo.identifierForVendor ?? const Uuid().v4(); // Fallback a UUID
+            androidInfo.id ?? const Uuid().v4(); // Usa Android ID o genera UUID
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        newDeviceId = iosInfo.identifierForVendor ?? const Uuid().v4();
       } else {
-        // Para otras plataformas o si no se puede obtener, genera un UUID
-        newDeviceId = const Uuid().v4();
+        newDeviceId = const Uuid().v4(); // Para Windows/otros
       }
 
-      // Guarda el nuevo ID en la configuración
+      // Guarda el nuevo ID
       await setConfigValue('device_id_key', newDeviceId);
       return newDeviceId;
+    } catch (e) {
+      // Si algo falla, devuelve un UUID como último recurso
+      return const Uuid().v4();
     }
   }
 
